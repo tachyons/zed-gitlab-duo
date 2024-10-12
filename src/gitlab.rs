@@ -1,4 +1,3 @@
-use std::process::{Command, Stdio};
 use zed::lsp::{Completion, Symbol};
 use zed::settings::LspSettings;
 use zed::{serde_json, CodeLabel, LanguageServerId};
@@ -72,16 +71,23 @@ impl zed::Extension for GitLabDuoExtension {
     /// Returns the initialization options to pass to the specified language server.
     fn language_server_initialization_options(
         &mut self,
-        language_server_id: &LanguageServerId,
-        worktree: &zed::Worktree,
+        _language_server_id: &LanguageServerId,
+        _worktree: &zed::Worktree,
     ) -> Result<Option<serde_json::Value>> {
-        let initialization_options =
-            LspSettings::for_worktree(language_server_id.as_ref(), worktree)
-                .ok()
-                .and_then(|lsp_settings| lsp_settings.initialization_options.clone())
-                .unwrap_or_default();
+        let data = r#"
+                {
+                "extension": {
+                  "name": "Zed Duo extension,
+                  "version": "0.0.1",
+                },
+                "ide": {
+                  "name: 'Zed',
+                  "version": "0.156.1",
+                  "vendor": "Zed",
+                 },
+                }"#;
 
-        Ok(Some(serde_json::json!(initialization_options)))
+        Ok(Some(serde_json::json!(data)))
     }
 
     /// Returns the label for the given completion.
