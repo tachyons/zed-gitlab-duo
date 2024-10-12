@@ -1,0 +1,11 @@
+id = "tachyons-gitlab"
+name = "GitLab"
+version = "0.0.1"
+schema_version = 1
+authors = ["Aboobacker MK <aboobackervyd@gmail.com>"]
+description = "My cool extension"
+repository = "https://github.com/tachyons/zed-gitlab-duo"
+
+[language_servers.gitlab-duo]
+name = "GitLab Duo"
+languages = ["Ruby", "Rust"]
