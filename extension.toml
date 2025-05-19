@@ -9,3 +9,6 @@ repository = "https://github.com/tachyons/zed-gitlab-duo"
 [language_servers.gitlab-duo]
 name = "GitLab Duo"
 languages = ["Ruby", "Rust"]
+[slash_commands.duo-explain]
+description = "Explain code or concepts using GitLab Duo AI"
+requires_argument = true
