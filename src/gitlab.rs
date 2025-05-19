@@ -1,5 +1,3 @@
-use std::fmt::Pointer;
-use std::path::Path;
 use zed::lsp::{Completion, Symbol};
 use zed::settings::LspSettings;
 use zed::{
@@ -74,12 +72,12 @@ impl GitLabDuoExtension {
         let formatted = text.replace("\\n", "\n");
 
         // Handle other common escape sequences
-        let formatted = formatted
-            .replace("\\t", "\t")
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\");
+        
 
         formatted
+            .replace("\\t", "\t")
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
     }
 
     // Read a file's content
@@ -89,7 +87,7 @@ impl GitLabDuoExtension {
 
         match worktree.read_text_file(file_path) {
             Ok(content) => Ok(content),
-            Err(e) => Err(format!("Failed to read file '{}': {}", file_path, e).into()),
+            Err(e) => Err(format!("Failed to read file '{}': {}", file_path, e)),
         }
     }
 
@@ -111,8 +109,8 @@ impl GitLabDuoExtension {
 
         // Create the appropriate prompt based on command type
         let prompt = match command_type {
-            "refactor" => format!("Please refactor this code to make it more maintainable, efficient, and follow best practices."),
-            "generate-tests" => format!("Please generate comprehensive tests for this code, ensuring good test coverage."),
+            "refactor" => "Please refactor this code to make it more maintainable, efficient, and follow best practices.".to_string(),
+            "generate-tests" => "Please generate comprehensive tests for this code, ensuring good test coverage.".to_string(),
             _ => content.to_string(),  // For ask command, use the content directly
         };
 
@@ -162,7 +160,7 @@ impl GitLabDuoExtension {
                     .map(|(_, value)| value.parse::<u16>().unwrap_or(200))
                     .unwrap_or(200);
 
-                if status_code >= 200 && status_code < 300 && !response.body.is_empty() {
+                if (200..300).contains(&status_code) && !response.body.is_empty() {
                     // Parse the response
                     match String::from_utf8(response.body.clone()) {
                         Ok(text) => {
@@ -182,24 +180,24 @@ impl GitLabDuoExtension {
                                             _ => "GitLab Duo Response",
                                         };
 
-                                        return Ok(zed::SlashCommandOutput {
+                                        Ok(zed::SlashCommandOutput {
                                             text: formatted_content.clone(),
                                             sections: vec![zed::SlashCommandOutputSection {
                                                 range: (0..formatted_content.len()).into(),
                                                 label: label.to_string(),
                                             }],
-                                        });
+                                        })
                                     } else {
                                         // Just return the whole JSON as text if no content field
                                         let formatted_text = self.format_response_text(&text);
 
-                                        return Ok(zed::SlashCommandOutput {
+                                        Ok(zed::SlashCommandOutput {
                                             text: formatted_text.clone(),
                                             sections: vec![zed::SlashCommandOutputSection {
                                                 range: (0..formatted_text.len()).into(),
                                                 label: "GitLab Duo Response".to_string(),
                                             }],
-                                        });
+                                        })
                                     }
                                 }
                                 Err(_) => {
@@ -212,43 +210,43 @@ impl GitLabDuoExtension {
                                         _ => "GitLab Duo Response",
                                     };
 
-                                    return Ok(zed::SlashCommandOutput {
+                                    Ok(zed::SlashCommandOutput {
                                         text: formatted_text.clone(),
                                         sections: vec![zed::SlashCommandOutputSection {
                                             range: (0..formatted_text.len()).into(),
                                             label: label.to_string(),
                                         }],
-                                    });
+                                    })
                                 }
                             }
                         }
                         Err(_) => {
-                            return Ok(zed::SlashCommandOutput {
+                            Ok(zed::SlashCommandOutput {
                                 text: format!(
                                     "Invalid UTF-8 in response: {}",
                                     String::from_utf8_lossy(&response.body)
                                 ),
                                 sections: vec![],
-                            });
+                            })
                         }
                     }
                 } else {
                     // Handle error response
                     let error_message = String::from_utf8_lossy(&response.body);
-                    return Ok(zed::SlashCommandOutput {
+                    Ok(zed::SlashCommandOutput {
                         text: format!(
                             "Error from GitLab Duo API ({}): {}",
                             status_code, error_message
                         ),
                         sections: vec![],
-                    });
+                    })
                 }
             }
             Err(e) => {
-                return Ok(zed::SlashCommandOutput {
+                Ok(zed::SlashCommandOutput {
                     text: format!("Request failed: {}", e),
                     sections: vec![],
-                });
+                })
             }
         }
     }
@@ -460,7 +458,7 @@ impl zed::Extension for GitLabDuoExtension {
                 )
             }
 
-            _ => Err(format!("Unknown slash command: {}", command.name).into()),
+            _ => Err(format!("Unknown slash command: {}", command.name)),
         }
     }
 
@@ -480,7 +478,7 @@ impl zed::Extension for GitLabDuoExtension {
                 // file completion mechanism handle this
                 Ok(vec![])
             }
-            _ => Err(format!("Unknown slash command: {}", command.name).into()),
+            _ => Err(format!("Unknown slash command: {}", command.name)),
         }
     }
 }
