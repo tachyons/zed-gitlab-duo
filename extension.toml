@@ -164,13 +164,20 @@ languages = [
     "Zig",
 ]
 
-[slash_commands.duo-ask]
-description = "Ask code or concepts using GitLab Duo AI"
-requires_argument = true
-[slash_commands.duo-refactor]
-description = "Refactor code using GitLab Duo AI"
-requires_argument = true
+[agent_servers.gitlab-duo-agent]
+name = "GitLab Duo Agent"
 
-[slash_commands.duo-generate-tests]
-description = "Generate tests using GitLab Duo AI"
-requires_argument = true
+[agent_servers.gitlab-duo-agent.env]
+GITLAB_URL = "https://gitlab.com"
+
+[agent_servers.gitlab-duo-agent.targets.darwin-aarch64]
+archive = "https://gitlab.com/reprazent/gitlab-duo-acp/-/releases/v0.2.0/downloads/gitlab-duo-acp_0.2.0_Darwin_arm64.tar.gz"
+cmd = "./gitlab-duo-acp"
+args = ["start"]
+
+[agent_servers.gitlab-duo-agent.targets.linux-x86_64]
+archive = "https://gitlab.com/reprazent/gitlab-duo-acp/-/releases/v0.2.0/downloads/gitlab-duo-acp_0.2.0_Linux_x86_64.tar.gz"
+cmd = "./gitlab-duo-acp"
+args = ["start"]
+
+[context_servers.gitlab-mcp]
