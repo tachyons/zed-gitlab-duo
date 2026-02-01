@@ -42,7 +42,7 @@ Then in add configuration in settings
 > [!IMPORTANT]  
 > Gitlab Duo support is implemented as a 
 > [LSP](https://zed.dev/docs/extensions/languages#language-servers), 
-> and experminal  [ACP](https://zed.dev/docs/extensions/agent-servers).
+> and experimental  [ACP](https://zed.dev/docs/extensions/agent-servers).
  
 <img width="363" height="379" alt="Screenshot 2026-02-01 at 11 26 52 PM" src="https://github.com/user-attachments/assets/a7998037-4789-4e0d-a5b4-67374226b87c" />
 
