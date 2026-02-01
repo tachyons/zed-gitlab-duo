@@ -42,10 +42,19 @@ Then in add configuration in settings
 > [!IMPORTANT]  
 > Gitlab Duo support is implemented as a 
 > [LSP](https://zed.dev/docs/extensions/languages#language-servers), 
-> not [ACP](https://zed.dev/docs/extensions/agent-servers).
-> Therefore, you will not find find it in Zed's typical AI locations:
->
-> ![Gitlab Duo within Zed](https://github.com/user-attachments/assets/ba42113f-9fcb-49dc-be8a-2f60fc6e18b6)
+> and experminal  [ACP](https://zed.dev/docs/extensions/agent-servers).
+ 
+<img width="363" height="379" alt="Screenshot 2026-02-01 at 11 26 52 PM" src="https://github.com/user-attachments/assets/a7998037-4789-4e0d-a5b4-67374226b87c" />
+
+For GitLab duo agent, the token need to be set as the env var `GITLAB_AUTH_TOKEN` or in the config file
+
+```
+~/.config/gitlab-duo-acp/config.yml
+```
+```yaml
+gitlab_auth_token: glpat-xxxx
+```
+
 
 Open some file and start coding. Duo will start providing suggestions automatically. 
 You can ask Duo to display suggestions by running the `editor: show completions` 
