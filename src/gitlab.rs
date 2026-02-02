@@ -1,26 +1,43 @@
 use zed::lsp::{Completion, Symbol};
-use zed::serde_json::{self};
+use zed::serde_json::{self, json};
 use zed::settings::LspSettings;
-use zed::{CodeLabel, ContextServerId, LanguageServerId};
+use zed::{CodeLabel, CodeLabelSpan, ContextServerId, LanguageServerId};
 use zed_extension_api::{self as zed, settings::ContextServerSettings, Result};
+
+// Constants for versioning and configuration
+const EXTENSION_NAME: &str = "Zed Duo extension";
+const EXTENSION_VERSION: &str = "0.0.1";
+const ZED_NAME: &str = "Zed";
+const ZED_VERSION: &str = "0.156.1";
+const ZED_VENDOR: &str = "Zed";
+const GITLAB_REGISTRY: &str = "https://gitlab.com/api/v4/packages/npm/";
+const GITLAB_LSP_PACKAGE: &str = "@gitlab-org/gitlab-lsp";
+const DEFAULT_GITLAB_URL: &str = "https://gitlab.com";
 
 struct GitLabDuoExtension {
     cached_binary_path: Option<String>,
 }
 
 impl GitLabDuoExtension {
-    // TODO improve installation by automatically downloading latest package
     fn language_server_binary_path(
         &mut self,
         _language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<String> {
+        // Use cached path if available
+        if let Some(cached) = &self.cached_binary_path {
+            return Ok(cached.clone());
+        }
+
+        // Find npx in PATH
         if let Some(path) = worktree.which("npx") {
-            let binary_path = path;
-            self.cached_binary_path = Some(binary_path.clone());
-            Ok(binary_path)
+            self.cached_binary_path = Some(path.clone());
+            Ok(path)
         } else {
-            Ok("/todo".to_string())
+            Err(
+                "npx not found in PATH. Please install Node.js and npm to use GitLab Duo."
+                    .to_string(),
+            )?
         }
     }
 }
@@ -40,8 +57,8 @@ impl zed::Extension for GitLabDuoExtension {
         Ok(zed::Command {
             command: self.language_server_binary_path(language_server_id, worktree)?,
             args: vec![
-                "--registry=https://gitlab.com/api/v4/packages/npm/".to_string(),
-                "@gitlab-org/gitlab-lsp".to_string(),
+                format!("--registry={}", GITLAB_REGISTRY),
+                GITLAB_LSP_PACKAGE.to_string(),
                 "--stdio".to_string(),
             ],
             env: Default::default(),
@@ -54,74 +71,134 @@ impl zed::Extension for GitLabDuoExtension {
         worktree: &zed::Worktree,
     ) -> Result<Option<serde_json::Value>> {
         let settings = LspSettings::for_worktree("gitlab-duo", worktree)
-            .ok()
-            .and_then(|lsp_settings| lsp_settings.settings.clone())
-            .unwrap_or_default();
+            .map_err(|e| format!("Failed to load GitLab Duo settings: {}", e))?
+            .settings
+            .unwrap_or_else(|| {
+                // Provide default settings with helpful comment
+                json!({
+                    "codeCompletion": {
+                        "enabled": true
+                    }
+                })
+            });
+
         Ok(Some(settings))
     }
 
-    /// Returns the initialization options to pass to the specified language server.
     fn language_server_initialization_options(
         &mut self,
         _language_server_id: &LanguageServerId,
         _worktree: &zed::Worktree,
     ) -> Result<Option<serde_json::Value>> {
-        // Fixed string literal with proper quotes
-        let data = r#"{
-                "extension": {
-                  "name": "Zed Duo extension",
-                  "version": "0.0.1"
-                },
-                "ide": {
-                  "name": "Zed",
-                  "version": "0.156.1",
-                  "vendor": "Zed"
-                }
-            }"#;
-
-        // Parse the JSON string to a Value
-        let parsed = serde_json::from_str(data)
-            .map_err(|e| format!("Failed to parse initialization options: {}", e))?;
-
-        Ok(Some(parsed))
+        // Use json! macro for cleaner, compile-time validated JSON
+        Ok(Some(json!({
+            "extension": {
+                "name": EXTENSION_NAME,
+                "version": EXTENSION_VERSION
+            },
+            "ide": {
+                "name": ZED_NAME,
+                "version": ZED_VERSION,
+                "vendor": ZED_VENDOR
+            }
+        })))
     }
 
-    /// Returns the label for the given completion.
     fn label_for_completion(
         &self,
         _language_server_id: &LanguageServerId,
-        _completion: Completion,
+        completion: Completion,
     ) -> Option<CodeLabel> {
-        None
+        // Build the label text with optional detail
+        let label_text = if let Some(detail) = &completion.detail {
+            if detail.is_empty() {
+                completion.label.clone()
+            } else {
+                format!("{} {}", completion.label, detail)
+            }
+        } else {
+            completion.label.clone()
+        };
+
+        let filter_range = 0..completion.label.len();
+
+        // Create highlighting spans based on completion kind
+        let mut spans = vec![CodeLabelSpan::literal(&completion.label, None)];
+
+        if let Some(detail) = &completion.detail {
+            if !detail.is_empty() {
+                spans.push(CodeLabelSpan::literal(" ", None));
+                spans.push(CodeLabelSpan::literal(detail, Some("comment".to_string())));
+            }
+        }
+
+        Some(CodeLabel {
+            code: label_text,
+            spans,
+            filter_range: filter_range.into(),
+        })
     }
 
-    /// Returns the label for the given symbol.
     fn label_for_symbol(
         &self,
         _language_server_id: &LanguageServerId,
-        _symbol: Symbol,
+        symbol: Symbol,
     ) -> Option<CodeLabel> {
-        None
+        let label_text = symbol.name.clone();
+        let filter_range = 0..symbol.name.len();
+
+        // Apply syntax highlighting based on symbol kind
+        let highlight = match symbol.kind {
+            zed::lsp::SymbolKind::Function | zed::lsp::SymbolKind::Method => "function",
+            zed::lsp::SymbolKind::Class | zed::lsp::SymbolKind::Interface => "type",
+            zed::lsp::SymbolKind::Variable | zed::lsp::SymbolKind::Constant => "variable",
+            zed::lsp::SymbolKind::Module | zed::lsp::SymbolKind::Namespace => "keyword",
+            _ => "identifier",
+        };
+
+        Some(CodeLabel {
+            code: label_text,
+            spans: vec![CodeLabelSpan::literal(
+                &symbol.name,
+                Some(highlight.to_string()),
+            )],
+            filter_range: filter_range.into(),
+        })
     }
+
 
     fn context_server_command(
         &mut self,
         _context_server_id: &ContextServerId,
         project: &zed::Project,
     ) -> Result<zed::Command> {
-        let settings = ContextServerSettings::for_project("gitlab-mcp", project)?;
+        // Load and validate settings
+        let settings = ContextServerSettings::for_project("gitlab-mcp", project)
+            .map_err(|e| format!("Failed to load GitLab MCP settings: {}", e))?;
+
         let settings_json = settings.settings.unwrap_or_default();
+
+        // Extract and validate base URL
         let url = settings_json
             .get("baseUrl")
             .and_then(|v| v.as_str())
-            .unwrap_or("https://gitlab.com");
+            .unwrap_or(DEFAULT_GITLAB_URL);
 
+        // Basic URL validation
+        if !url.starts_with("http://") && !url.starts_with("https://") {
+            return Err(format!(
+                "Invalid baseUrl '{}': must start with http:// or https://",
+                url
+            ))?;
+        }
+
+        // Note: npx will fail with a clear error if not found, so we don't need to validate here
         Ok(zed::Command {
             command: "npx".to_string(),
             args: vec![
                 "-y".to_string(),
                 "mcp-remote@latest".to_string(),
-                format!("{}/api/v4/mcp", url),
+                format!("{}/api/v4/mcp", url.trim_end_matches('/')),
             ],
             env: Default::default(),
         })

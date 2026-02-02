@@ -163,6 +163,15 @@ languages = [
     "Yarn",
     "Zig",
 ]
+[language_servers.gitlab-duo.language_ids]
+"JavaScript" = "javascript"
+"TSX" = "typescriptreact"
+"HTML" = "html"
+"CSS" = "css"
+"Ruby" = "ruby"
+"Rust" = "rust"
+
+
 
 [agent_servers.gitlab-duo-agent]
 name = "GitLab Duo Agent"
